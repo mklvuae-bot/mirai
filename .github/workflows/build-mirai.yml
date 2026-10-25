@@ -1,0 +1,47 @@
+
+name: Build Mirai 2.0.0 Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Download original Mirai source
+        uses: actions/checkout@v4
+        with:
+          repository: bambosan/mirai
+          ref: 2.0.0
+
+      - name: Set up Python on GitHub
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install shader compiler
+        run: python -m pip install lazurite==0.8.3
+
+      - name: Compile Windows shaders
+        shell: cmd
+        run: call build.bat windows
+
+      - name: Package Minecraft shader
+        shell: pwsh
+        run: |
+          if (!(Test-Path "pack\manifest.json")) {
+            throw "Missing pack manifest"
+          }
+          Compress-Archive -Path "pack\*" -DestinationPath "mirai-windows-2.0.0.zip" -Force
+          Rename-Item "mirai-windows-2.0.0.zip" "mirai-windows-2.0.0.mcpack"
+
+      - name: Upload Minecraft pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mirai-2.0.0-Windows
+          path: mirai-windows-2.0.0.mcpack
+          if-no-files-found: error
